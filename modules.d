@@ -15,6 +15,18 @@ private TopScope preludeScope=null;
 private Source preludeSrc=null;
 private TopScope operatorScope=null;
 private static Q!(Expression[],TopScope)[string] modules;
+private static Source[] moduleSources; // sources read by parseFile, for clearModuleCache
+
+// Forget every imported module, so the next import re-reads it from disk.
+// A one-shot compile never needs this. A long-running host (the language
+// server) does: otherwise every check sees an imported file as it was the first
+// time it was read. The prelude and operator scopes are not user files and stay
+// cached. The imported sources are disposed, since Source.get scans every live one.
+void clearModuleCache(){
+	modules=null;
+	foreach(src;moduleSources) src.dispose();
+	moduleSources=null;
+}
 
 import util.io;
 string readCode(File f){
@@ -218,6 +230,7 @@ int parseFile(string path,ErrorHandler err,ref Expression[] r,Location loc=Locat
 		}
 	}
 	auto src=new Source(path, code);
+	moduleSources~=src;
 	auto nerr=err.nerrors;
 	r=parseSource(src,err);
 	return nerr!=err.nerrors;
