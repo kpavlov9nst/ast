@@ -15,6 +15,10 @@ private int freshNameCounter=0;
 Id freshName(){ // TODO: improve mechanism for generating temporaries
 	return Id.intern(text("__tmp",freshNameCounter++));
 }
+// For a long-running host that checks one file after another in one process
+// (the language server): resetting the counter between checks numbers each
+// check's temporaries as a fresh compile would. They appear in diagnostics.
+void resetFreshNameCount(int count){ freshNameCounter=count; }
 
 Expression getFixedIntTy(Expression bits,bool isSigned,bool isClassical,Location loc,Scope isc){ // TODO: do not require a scope
 	assert(bits.isSemEvaluated());

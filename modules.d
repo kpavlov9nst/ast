@@ -1,7 +1,6 @@
 module ast.modules;
 
 import util.tuple: Q=Tuple, q=tuple;
-import util: mallocAppender;
 
 import astopt;
 import ast.parser;
@@ -14,6 +13,7 @@ import ast.expression: Expression;
 private TopScope preludeScope=null;
 private Source preludeSrc=null;
 private TopScope operatorScope=null;
+private Source operatorSrc=null;
 private static Q!(Expression[],TopScope)[string] modules;
 private static Source[] moduleSources; // sources read by parseFile, for clearModuleCache
 
@@ -28,6 +28,20 @@ void clearModuleCache(){
 	moduleSources=null;
 }
 
+// Forget the prelude and operator scopes too, so the next check builds them
+// again, exactly as a fresh compile does. A long-running host that keeps them
+// would number its temporaries differently from a fresh compile (the prelude's
+// are drawn from the same counter, between parsing a file and analysing it),
+// and would keep objects from an older check alive in them.
+void clearBuiltinScopes(){
+	preludeScope=null;
+	operatorScope=null;
+	if(preludeSrc) preludeSrc.dispose();
+	if(operatorSrc) operatorSrc.dispose();
+	preludeSrc=null;
+	operatorSrc=null;
+}
+
 // Lets a host supply a module's text instead of the file on disk: the language
 // server passes an editor buffer with unsaved changes. Returning false reads the
 // file as usual.
@@ -36,7 +50,11 @@ bool delegate(string path,out string code) moduleSourceOverride;
 import util.io;
 string readCode(File f){
 	// TODO: use memory-mapped file with 4 padding zero bytes
-	auto app=mallocAppender!(char[])();
+	// GC memory, not malloc: nothing frees a source's code, and a long-running
+	// host (the language server) reads the prelude and every import again for
+	// each check, so malloc'd copies would leak one prelude per keystroke.
+	import std.array: appender;
+	auto app=appender!(char[])();
 	foreach(r;f.byChunk(1024)){app.put(cast(char[])r);}
 	app.put("\0\0\0\0"); // insert 4 padding zero bytes
 	return cast(string)app.data;
@@ -248,7 +266,7 @@ Scope getOperatorScope(ErrorHandler err, Location loc){
 	if(operatorScope) return operatorScope;
 	operatorScope = new TopScope(".operators",err);
 	operatorScope.import_(getPreludeScope(err, loc));
-	auto src = new Source(".operators", readBuiltin!([operatorsPath])(0));
+	auto src = operatorSrc = new Source(".operators", readBuiltin!([operatorsPath])(0));
 	int nerr = err.nerrors;
 	auto exprs = parseSource(src, err);
 	exprs = semantic(exprs,operatorScope);
