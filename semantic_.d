@@ -3699,7 +3699,12 @@ bool buildIndexReplacements(Scope.DeclProp.ComponentReplacement[][] creplss,Scop
 							idx=cast(IndexExp)lef;
 					}
 				}
-				assert(idx&&idx.byRef,text(de));
+				// The read can resolve to the temporary of a replacement already in
+				// progress for the same aggregate (in a with block, say): a separate
+				// variable, with no aggregate behind it to promote. Asserting
+				// that it was an index crashed.
+				if(!idx) continue;
+				assert(idx.byRef,text(de));
 				bool anyQuantum=false;
 				for(auto idx2=idx;idx2;idx2=cast(IndexExp)idx2.e)
 					anyQuantum|=!idx2.a.type.isClassical();
