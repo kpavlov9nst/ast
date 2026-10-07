@@ -3366,7 +3366,16 @@ Expression defineLhsSemanticImpl(CatExp ce,DefineLhsContext context){
 
 Expression defineLhsSemanticImpl(WildcardExp e,DefineLhsContext context){
 	e.type=context.type;
-	if(!isPresemantic) e.setSemCompleted();
+	// The right-hand side gives no type for this entry when its shape does not
+	// match, as in (a,_):=(); completing without one asserted. The enclosing
+	// pattern reports the mismatch; while a return type is being inferred, it
+	// defers that, and so must this: marked erroneous now, the definition was
+	// skipped by the final pass and the error never reported.
+	static if(!isPresemantic){
+		if(e.type) e.setSemCompleted();
+		else if(!context.sc.inferenceMode) e.setSemError();
+		else markDeferredSpecificityCheck(context.sc);
+	}
 	return e;
 }
 
