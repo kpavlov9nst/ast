@@ -3670,8 +3670,12 @@ bool buildIndexReplacements(Scope.DeclProp.ComponentReplacement[][] creplss,Scop
 				if(auto idx=cast(IndexExp)e){
 					replaceMeaning(idx.e);
 					propErr(idx.e,e);
+					propErr(idx.a,e);
 					if(idx.e.type&&idx.a.type)
 						idx.type=checkIndex(idx.e.type,idx.a,idx,idx.isSemError?null:sc);
+					// checkIndex reports why it gives no type (a non-integer index,
+					// say) but does not mark the index, which then asserted below.
+					if(!idx.type) idx.setSemError();
 					assert(idx.type||idx.isSemError());
 					return;
 				}
