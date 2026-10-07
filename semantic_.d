@@ -2191,6 +2191,10 @@ Expression statementSemanticImplDefault(Expression e,Scope sc,ref StmFlags flags
 	e=expressionSemantic(e,context);
 	if(!e.isSemError()){
 		sc.error("not supported at this location",oe.loc);
+		// Mark the statement, not what it evaluated to: that can be shared,
+		// such as typeof(x), which evaluates to x's type itself (!ℕ, say), and
+		// marking it would corrupt every other use of that type.
+		if(e !is oe) e=oe;
 		e.setSemForceError();
 	}
 	return e;
