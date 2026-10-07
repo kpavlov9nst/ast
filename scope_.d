@@ -2412,6 +2412,20 @@ class RawProductScope: NestedScope{
 		return annotation;
 	}
 	void forceClose(){}
+	// A function type is never run, so nothing in it may consume a variable
+	// from outside (measure(x)→𝔹). This scope does not track that variable,
+	// and recording the consumption asserted. The lookup is reported and
+	// suppressed, as in a typeof operand.
+	override Declaration lookupImpl(Identifier ident,bool rnsym,bool lookupImports,Lookup kind,Scope origin,DeadDecl[]* failures){
+		if(auto decl=lookupHereImpl(ident,rnsym,failures)) return decl;
+		auto decl=parent.lookupImpl(ident,rnsym,lookupImports,kind,origin,failures);
+		if(decl&&kind==Lookup.consuming&&!decl.isToplevelDeclaration()&&!ident.typeofSuppressedCapture){
+			error(format("cannot consume `%s` in a type",ident),ident.loc);
+			ident.typeofSuppressedCapture=true;
+			ident.setSemError();
+		}
+		return decl;
+	}
 }
 
 class CapturingScope(T): NestedScope{
