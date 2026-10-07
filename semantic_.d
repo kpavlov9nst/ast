@@ -4477,10 +4477,13 @@ void checkIndexReplacement(Expression be,Scope sc){
 				}
 			}
 		}
-		foreach(i;0..crepls.length){
-			if(!crepls[i].read){
-				sc.error("replaced component must be consumed in right-hand side", indicesToReplace[i].loc);
-				indicesToReplace[i].setSemError();
+		// By replacement, not by position in indicesToReplace, which skips the
+		// replacements without a write (an empty index) and so ran past its end.
+		foreach(ref crepl;crepls){
+			if(!crepl.read){
+				auto write=crepl.write;
+				sc.error("replaced component must be consumed in right-hand side", write?write.loc:be.loc);
+				if(write) write.setSemError();
 				be.setSemError();
 			}
 		}
