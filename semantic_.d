@@ -6875,8 +6875,11 @@ Expression expressionSemanticImpl(Identifier id,ExpSemContext context){
 			if(auto r=builtIn(id,sc)){
 				if(context.constResult!=ConstResult.called&&util.among(id.name,"Expectation","Marginal","sampleFrom","__query","__show")){
 					sc.error("special operator must be called directly",id.loc);
-					id.setSemError();
-					r.setSemError();
+					// The identifier is the error. builtIn has already completed it
+					// (and returns it, or something shared), so marking it the
+					// ordinary way asserted; this occurrence is the user's own.
+					id.setSemForceError();
+					return id;
 				}
 				return r;
 			}
