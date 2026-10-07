@@ -5392,6 +5392,12 @@ Expression opAssignExpSemantic(AAssignExp be,Scope sc,ref StmFlags flags)in{
 		we.loc=be.loc;
 		auto r=statementSemantic(we,sc,flags);
 		if(!r.isSemError()) finishIndexReplacement(r,sc);
+		else{
+			// As the other assignment paths do on error: the replacements left
+			// pending made the enclosing scope's merge assert.
+			sc.resetLocalComponentReplacements();
+			epilogues=[]; // (avoids error messages)
+		}
 		return lowerIndexReplacement(prologues,epilogues,r,sc,flags);
 	}
 	be.e1=oe1;
