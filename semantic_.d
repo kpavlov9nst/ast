@@ -2835,8 +2835,12 @@ Expression defineLhsSemanticImpl(IndexExp idx,DefineLhsContext context){
 			}else{
 				undefinedIdentifierError(id,failures,context.sc);
 				e.e.setSemError();
+				e.setSemError();
 				idx.setSemError();
-				return idx;
+				// e, the expression being analysed: the outermost one, idx,
+				// returned from a nested call became its own operand (e.e=r
+				// below), a cycle that y[][]:=... then recursed through forever.
+				return e;
 			}
 		}
 		if(auto idx=cast(IndexExp)next){
