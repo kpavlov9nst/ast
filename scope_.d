@@ -1541,6 +1541,13 @@ abstract class Scope{
 		// scope(exit) writeln("MERGING\n",this,"\n",scopes.map!(sc=>text("nested: ",sc,"\nconsumed: ",sc.consumedOuter,"\nsplit: ",sc.splitVars,"\nmergedVars: ",sc.mergedVars,"\nproducedOuter: ",producedOuter)).join("\n"),"\nEND MERGE\n");
 		// imported!"util.io".writeln("MERGING: ",scopes.map!(sc=>sc.rnsymtab));
 		// imported!"util.io".writeln("MERGING: ",scopes.map!(sc=>sc.dependencies));
+		// A scope that does not allow linear values (the top level, for one)
+		// does not nest its blocks (BlockScope's constructor), so there is
+		// nothing to merge: a top-level if expression asserted below.
+		if(!allowsLinear()){
+			assert(activeNestedScopes.empty);
+			return false;
+		}
 		clearConsumed(); // TODO: why needed?
 		foreach(sc;scopes) sc.clearConsumed();
 		assert(scopes==activeNestedScopes,text(scopes," ",activeNestedScopes));
