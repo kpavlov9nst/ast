@@ -4764,6 +4764,12 @@ bool checkAssignable(Declaration meaning,Location loc,Scope sc,bool isReversible
 	if(!checkNonConstDecl!("assign to","assigning to")(meaning,loc,sc,allowComponentConstBlocks,true))
 		return false;
 	auto vd=cast(VarDecl)meaning;
+	// Only a variable can be assigned to. A function (the prelude's Y gate, in
+	// Y*=z) passed the checks above, and reading its vtype through null crashed.
+	if(!vd){
+		sc.error(format("cannot assign to `%s`",meaning.name),loc);
+		return false;
+	}
 	static if(language==silq){
 		if(!isReversible&&!vd.vtype.isClassical()&&!sc.canRecompute(meaning)){
 			sc.error(format("cannot assign to quantum variable `%s`",meaning.name), loc);
