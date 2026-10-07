@@ -969,8 +969,12 @@ class ProductTy: Type{
 		}
 	}
 	override void setSemCompleted() {
-		assert(dom && dom.isSemEvaluated(), format("completed semantic analysis of product type without domain: %s", this));
-		assert(cod && cod.isSemCompleted(), format("completed semantic analysis of product type without codomain: %s", this));
+		// As Expression.setSemCompleted: a product type in error (`f→g` with f not
+		// a type, say) has no domain to check, and is left as it is.
+		if(!isSemError()){
+			assert(dom && dom.isSemEvaluated(), format("completed semantic analysis of product type without domain: %s", this));
+			assert(cod && cod.isSemCompleted(), format("completed semantic analysis of product type without codomain: %s", this));
+		}
 		super.setSemCompleted();
 	}
 	override ProductTy copyImpl(CopyArgs args){
