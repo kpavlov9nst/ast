@@ -5064,6 +5064,7 @@ Expression assignExpSemantic(AssignExp ae,Scope sc,ref StmFlags flags){
 			auto tmp=new Identifier(freshName);
 			tmp.loc=ae.e2.loc;
 			tde=new DefineExp(tmp,ae.e2);
+			tde.loc=ae.loc; // reversing a with block requires one: it asserted
 			tmp=tmp.copy();
 			tmp.byRef=true;
 			tde=statementSemantic(tde,sc,flags);
