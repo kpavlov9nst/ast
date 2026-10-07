@@ -3608,7 +3608,10 @@ bool buildIndexReplacements(Scope.DeclProp.ComponentReplacement[][] creplss,Scop
 	foreach(crepls;creplss){
 		assert(crepls.length);
 		Expression[] reads;
-		foreach(ref crepl;crepls){
+		// readOf[i] is crepls[i]'s read, null for one without a write. reads
+		// skips those, so it cannot be indexed by a position in crepls.
+		auto readOf=new Expression[](crepls.length);
+		foreach(i,ref crepl;crepls){
 			if(!crepl.write) continue;
 			auto id=new Identifier(crepl.name);
 			id.loc=loc;
@@ -3618,6 +3621,7 @@ bool buildIndexReplacements(Scope.DeclProp.ComponentReplacement[][] creplss,Scop
 			auto read=new BinaryExp!(Tok!":=")(id,moveExp(idx));
 			read.loc=crepl.write.loc;
 			reads~=read;
+			readOf[i]=read;
 		}
 		auto creplsCtx2=sc.moveLocalComponentReplacements(); // TODO: get rid of this
 		auto prologue=new CompoundExp(reads);
@@ -3625,7 +3629,7 @@ bool buildIndexReplacements(Scope.DeclProp.ComponentReplacement[][] creplss,Scop
 		prologue=statementSemanticImpl(prologue,sc,flags,resetConst:false);
 		if(prologue.isSemError()){
 			foreach(i,ref crepl;crepls){
-				propErr(reads[i],crepl.write);
+				if(readOf[i]) propErr(readOf[i],crepl.write);
 			}
 		}else prologue.setSemCompleted();
 		prologues~=prologue;
@@ -3714,7 +3718,7 @@ bool buildIndexReplacements(Scope.DeclProp.ComponentReplacement[][] creplss,Scop
 			id.loc=loc;
 			id.byRef=true;
 			auto idx=crepl.write.copy();
-			propErr(reads[i],idx);
+			propErr(readOf[i],idx);
 			idx.loc=crepl.write.loc;
 			idx.byRef=true;
 			auto write=new BinaryExp!(Tok!":=")(moveExp(idx),id);
