@@ -715,6 +715,12 @@ final class LastUse{
 	}
 }
 
+private bool isClassicalDecl(Declaration decl){
+	import ast.semantic_: typeForDecl;
+	auto type=typeForDecl(decl);
+	return type&&type.isClassical;
+}
+
 struct LastUses{
 	LastUses* parent;
 	MapX!(Declaration,LastUse) lastUses;
@@ -769,7 +775,11 @@ struct LastUses{
 		//imported!"util.io".writeln("ADDING LU: ",lastUse);
 		static if(language==silq){
 			lastUse.dep=lastUse.scope_.getDependency(lastUse.decl).dup;
-			assert(lastUse.kind!=LastUse.kind.synthesizedForget||!lastUse.dep.isTop||lastUse.decl.isSemError());
+			// A forget is only synthesized for what is known to be forgettable.
+			// A classical value always is, whatever its dependency: Scope.canForget
+			// says so without looking at it, and an earlier error (a return under
+			// quantum control, say) can leave it at ⊤.
+			assert(lastUse.kind!=LastUse.kind.synthesizedForget||!lastUse.dep.isTop||lastUse.decl.isSemError()||isClassicalDecl(lastUse.decl));
 			if(lastUse.kind==LastUse.Kind.synthesizedForget)
 				lastUse.scope_.noteDependencyResolved(lastUse.dep);
 		}
