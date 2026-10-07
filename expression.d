@@ -1141,6 +1141,10 @@ class Identifier: Expression{
 		if(byRef) return null; // TODO: why is this suddenly needed?
 		auto vd=cast(VarDecl)meaning;
 		if(!vd) return null;
+		// A variable whose definition is still being analysed is in no scope
+		// yet and has no value to give: the left-hand side of a reversed call,
+		// whose arguments are evaluated to fit the callee's type parameters.
+		if(!vd.scope_&&!vd.isSemFinal()) return null;
 		assert(vd.isSemFinal());
 		auto init=vd.initializer;
 		if(vd.isSemError()||!init) return null;
