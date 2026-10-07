@@ -1242,14 +1242,37 @@ struct Parser{
 		expect(Tok!"in");
 		bool leftExclusive=false,rightExclusive=false;
 		bool hasLeft=false;
-		auto save=saveState();
-		if(tok.type==Tok!"("){ hasLeft=true; leftExclusive=true; nextToken(); }
-		else if(tok.type==Tok!"["){ hasLeft=true; nextToken(); }
+		// A range and a container differ only after the first expression, and
+		// for an opening bracket, `[a..b)` or `[1,2]`, after it was consumed.
+		// Then scan ahead for a `..` directly inside the bracket, before a `,`,
+		// a `for` or the bracket's end, and rewind. (Parsing ahead, muted, and
+		// keeping that parse lost its syntax errors, so `for i in .{}` left an
+		// unlocated ErrorExp behind; parsing ahead and again doubled the work at
+		// each nested for loop in the aggregate.) Otherwise parse once.
+		Expression first=null;
+		bool isRange=false;
+		if(util.among(tok.type,Tok!"(",Tok!"[")){
+			auto save=saveState();
+			for(int depth=0;;nextToken()){
+				switch(ttype){
+					case Tok!"(",Tok!"[",Tok!"{": depth++; break;
+					case Tok!")",Tok!"]",Tok!"}": depth--; break;
+					case Tok!"..": isRange=depth==1; break;
+					default: break;
+				}
+				if(isRange||depth<=0||ttype==Tok!"EOF") break;
+				if(depth==1&&util.among(ttype,Tok!",",Tok!"for")) break;
+			}
+			restoreState(save);
+		}else{
+			first=parseExpression();
+			isRange=ttype==Tok!"..";
+		}
 		ForAggregate aggr;
-		auto exp=parseExpression();
-		if(ttype==Tok!".."){
-			commitState(save);
-			auto left=exp;
+		if(isRange){
+			if(tok.type==Tok!"("){ hasLeft=true; leftExclusive=true; nextToken(); }
+			else if(tok.type==Tok!"["){ hasLeft=true; nextToken(); }
+			auto left=first?first:parseExpression();
 			Expression step=null;
 			expect(Tok!"..");
 			auto right=parseExpression(0,false);
@@ -1262,13 +1285,11 @@ struct Parser{
 				if(tok.type==Tok!")"){ rightExclusive=true; nextToken(); }
 				else expect(Tok!"]");
 			}else rightExclusive=true;
-			if(leftExclusive == rightExclusive) handler.warning("deprecation: use half-open intervals", begin.to(tok.loc));
+			if(leftExclusive == rightExclusive && !muteerr) handler.warning("deprecation: use half-open intervals", begin.to(tok.loc));
 			aggr=ForAggregate(ForRange(leftExclusive,left,step,rightExclusive,right));
 		}else{
-			if(hasLeft){
-				restoreState(save);
-				exp=parseCondition();
-			}else commitState(save);
+			// A bracket here starts the expression itself, `(` a parenthesised one.
+			auto exp=first?first:util.among(tok.type,Tok!"(",Tok!"[")?parseCondition():parseExpression();
 			aggr=ForAggregate(ForContainer(exp));
 		}
 		return res=New!ForExp(var,pattern,aggr,null);
