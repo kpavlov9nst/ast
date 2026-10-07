@@ -740,8 +740,13 @@ class VectorTy: Type, ITupleTy{
 		if(auto r=next.freeVarsImpl(dg)) return r;
 		return num.freeVarsImpl(dg);
 	}
-	override VectorTy substituteImpl(MapSX!(Id,Expression) subst,TypeTransition* tt){
-		return vectorTy(next.substitute(subst,tt),num.substitute(subst,tt));
+	override Expression substituteImpl(MapSX!(Id,Expression) subst,TypeTransition* tt){
+		auto nnext=next.substitute(subst,tt),nnum=num.substitute(subst,tt);
+		// The length can stop being a natural number: merging if branches that
+		// define n as !ℕ and as !ℤ substitutes the merged n into 𝔹^n. Its length
+		// is then unknown, which is an array; vectorTy asserted on the length.
+		if(!nnum.type||!isSubtype(nnum.type,ℕt(true))) return arrayTy(nnext);
+		return vectorTy(nnext,nnum);
 	}
 	override bool unifyImpl(Expression rhs,ref MapSX!(Id,UnificationResult) subst,bool meet){
 		if(auto tt=cast(TupleTy)rhs)
