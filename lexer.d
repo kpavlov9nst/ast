@@ -939,6 +939,9 @@ private:
 				isPrefixed=true,p+=2;
 				while(isHex(*p)) p++;
 			}
+			// A prefix with no digits (0x, 0b, 0o) used to lex as an integer
+			// literal, which then failed to parse as one with an exception.
+			if(isPrefixed&&p==s+2) return tokError("missing digits after base prefix",s[0..p-s]);
 		}
 		if(!isPrefixed){
 			while(isDec(*p)) p++;
