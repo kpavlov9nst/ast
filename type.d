@@ -661,6 +661,12 @@ class ArrayTy: Type{
 				if(meet) return vectorTy(nnext,rvec.num);
 				else return arrayTy(nnext);
 			}
+			// Every component of a vector has its element type, so combining
+			// them one by one, as a tuple below, cannot succeed where this
+			// failed, and for vector(10^12,…) it never finished. Unless there
+			// are no components: an empty vector still joins to an array.
+			auto len=rvec.num.asIntegerConstant(true);
+			if(!len||len.get()!=0) return null;
 		}
 		if(auto rtup=r.isTupleTy()){
 			if(meet){
