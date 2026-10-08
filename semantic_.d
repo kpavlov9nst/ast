@@ -5294,7 +5294,9 @@ Expression assignExpSemantic(AssignExp ae,Scope sc,ref StmFlags flags){
 					}
 					foreach(i,exp;tpll.e) updateVars2(exp,exp,indexed,tt[i],rhsdep,stage);
 				}else if(auto at=cast(ArrayTy)rhsty){
-					foreach(exp;tpll.e) updateVars2(exp,olhs,indexed,at.next,rhsdep,stage);
+					// Each entry is its own left-hand side, as for a tuple type above:
+					// passing the whole tuple made updatedType assert on it.
+					foreach(exp;tpll.e) updateVars2(exp,exp,indexed,at.next,rhsdep,stage);
 				}else assert(ae.isSemError());
 			}else if(auto idx=cast(IndexExp)lhs){
 				auto nrhsdep=rhsdep;
