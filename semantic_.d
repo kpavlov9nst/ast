@@ -5412,7 +5412,7 @@ Expression opAssignExpSemantic(AAssignExp be,Scope sc,ref StmFlags flags)in{
 	if(!cast(CatExp)be.e1&&!cast(Identifier)be.e1){
 		auto tmp=new Identifier(freshName());
 		tmp.loc=be.e1.loc;
-		auto de=new DefineExp(tmp,be.e1);
+		auto de=new DefineExp(tmp,be.e1.copy());
 		de.loc=be.e1.loc;
 		be.e1=tmp.copy();
 		auto trans=new CompoundExp([de]);
