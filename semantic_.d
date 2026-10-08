@@ -9316,9 +9316,22 @@ Expression typeSemantic(Expression expr, Scope sc, bool allowQNumeric=false)in{a
 	}else return unwrap(expr.eval());
 }
 
+// A top-level declaration analysed on demand is analysed only once, so its
+// own errors must be reported even when its first use is in an analysis whose
+// errors are suppressed, such as the trial analysis of a with block's reverse:
+// otherwise they were lost, and the program passed with them.
+private T reportingErrorsOf(T)(Declaration decl,lazy T analyze){
+	if(!decl.isToplevelDeclaration()) return analyze;
+	auto handler=decl.scope_.handler;
+	auto suppress=handler.suppress;
+	handler.suppress=0;
+	scope(exit) handler.suppress=suppress;
+	return analyze;
+}
+
 Expression typeForDecl(Declaration decl){
 	if(auto dat=cast(DatDecl)decl){
-		if(!dat.dtype&&dat.scope_&&dat.sstate!=SemState.started) dat=cast(DatDecl)presemantic(dat,dat.scope_);
+		if(!dat.dtype&&dat.scope_&&dat.sstate!=SemState.started) dat=cast(DatDecl)reportingErrorsOf(dat,presemantic(dat,dat.scope_));
 		if(!dat.dtype) return null;
 		assert(cast(AggregateTy)dat.dtype);
 		static if(language==silq){
@@ -9335,7 +9348,7 @@ Expression typeForDecl(Declaration decl){
 	}
 	if(auto fd=cast(FunctionDef)decl){
 		if(!fd.ftype||!fd.ftypeFinal) setFtype(fd,true);
-		if((!fd.ftype||!fd.ftypeFinal)&&fd.scope_&&fd.sstate!=SemState.started) fd=functionDefSemantic(fd,fd.scope_);
+		if((!fd.ftype||!fd.ftypeFinal)&&fd.scope_&&fd.sstate!=SemState.started) fd=reportingErrorsOf(fd,functionDefSemantic(fd,fd.scope_));
 		assert(!!fd);
 		return fd.ftype;
 	}
