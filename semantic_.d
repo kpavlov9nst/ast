@@ -1027,7 +1027,7 @@ Expression statementSemanticImpl(WithExp with_,Scope sc,ref StmFlags flags,bool 
 		}
 		propErr(with_.itrans,with_);
 	}
-	with_.type=unit;
+	with_.type=withType(with_);
 	with_.setSemCompleted();
 	static if(language==silq)
 	if(haveWithTransReplacements){
@@ -3965,7 +3965,7 @@ Expression lowerIndexReplacement(CompoundExp[] prologues,CompoundExp[] epilogues
 		with_.itrans=eplg;
 		with_.loc=r.loc;
 		with_.isIndices=true;
-		with_.type=unit;
+		with_.type=withType(with_);
 		propErr(prlg,with_);
 		propErr(prev,with_);
 		propErr(eplg,with_);
@@ -9399,7 +9399,14 @@ private bool definitelyReturnsImpl(RepeatExp re){
 }
 static if(language==silq)
 private bool definitelyReturnsImpl(WithExp we){
-	return definitelyReturns(we.bdy);
+	return definitelyReturns(we.trans)||definitelyReturns(we.bdy);
+}
+// A with statement does not continue if either its transformation or its body
+// always aborts (neither may return). Typing it 𝟙 regardless let a branch that
+// always aborts, e.g. assigning to x[0] of an empty array, merge its variables.
+static if(language==silq)
+Expression withType(WithExp we){
+	return definitelyReturnsImpl(we)?bottom:unit;
 }
 private bool definitelyReturnsImpl(T)(T e)
 	if(isOneOf!(T,AliasSeq!(CallExp,TypeAnnotationExp,CObserveExp,ForgetExp,FunctionDef,CommaExp,DefineExp))||is(T:AAssignExp))
