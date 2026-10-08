@@ -4826,7 +4826,15 @@ Expression updatedType(Expression baseTy,Expression[] indices,Expression rhsty)i
 		if(!indices.length) return rhsty;
 		Expression impl(){
 			bool quantumIndex=!indices[0].type.isClassical;
-			if(auto tt=baseTy.isTupleTy){
+			// Expanding a vector into a tuple of its components gives each one its
+			// own type, but a long vector cannot be expanded: vector(10^12,1)
+			// with one component updated ran out of memory. Above this length
+			// it takes the joined element type, as for a non-constant index.
+			enum maxExpandedVector=1<<20;
+			auto vtBase=cast(VectorTy)baseTy;
+			bool expand=true;
+			if(vtBase) if(auto n=vtBase.num.asIntegerConstant(true)) expand=n.get()<=maxExpandedVector;
+			if(auto tt=expand?baseTy.isTupleTy:null){
 				if(auto lit=indices[0].asIntegerConstant(true)){
 					auto c=lit.get();
 					if(c<0||c>=tt.length) return baseTy;
@@ -4844,6 +4852,11 @@ Expression updatedType(Expression baseTy,Expression[] indices,Expression rhsty)i
 				}
 			}
 			if(auto vt=cast(VectorTy)baseTy){
+				// as for an expanded vector above: an index known to be out of
+				// bounds updates nothing (the write aborts)
+				if(auto lit=indices[0].asIntegerConstant(true))
+					if(auto n=vt.num.asIntegerConstant(true))
+						if(lit.get()<0||lit.get()>=n.get()) return baseTy;
 				auto nnext=joinTypes(vt.next,rec(vt.next,indices[1..$]));
 				if(nnext&&quantumIndex) nnext=nnext.getQuantum();
 				if(!nnext) return null;
