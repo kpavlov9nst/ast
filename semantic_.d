@@ -8871,7 +8871,9 @@ FunctionDef functionDefSemantic(FunctionDef fd,Scope sc){
 	//scope(exit) imported!"util.io".writeln("RETURNED: ",fd);
 	if(fd.isSemCompleted()||fd.isSemError()) return fd;
 	if(!fd.fscope_) fd=cast(FunctionDef)presemantic(fd,sc); // TODO: why does checking for fd.scope_ not work? (test3.slq)
-	if(fd.isSemCompleted()||fd.body_&&fd.body_.isSemCompleted()) return fd;
+	// presemantic may already have analysed fd's body, possibly with an error,
+	// e.g. via a return type that refers back to it
+	if(fd.isSemCompleted()||fd.body_&&fd.body_.isSemFinal()) return fd;
 	if(fd.sstate==SemState.started) return fd; // only one active semantic analysis at one time
 	if(!fd.isSemError()) fd.sstate=SemState.started;
 	auto ftypeBefore=fd.ftype;
