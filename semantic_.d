@@ -3263,7 +3263,7 @@ Expression defineLhsSemanticImpl(CatExp ce,DefineLhsContext context){
 					if(!l2){
 						auto sub=new NSubExp(vt.num,l1);
 						sub.loc=l1.loc;
-						sub.type=ℕt(true);
+						sub.type=splitLengthType(vt.num,l1);
 						sub.setSemCompleted();
 						ntype2=vectorTy(vt.next,sub.eval());
 					}
@@ -3273,7 +3273,7 @@ Expression defineLhsSemanticImpl(CatExp ce,DefineLhsContext context){
 					if(!l1){
 						auto sub=new NSubExp(vt.num,l2);
 						sub.loc=l2.loc;
-						sub.type=ℕt(true);
+						sub.type=splitLengthType(vt.num,l2);
 						sub.setSemCompleted();
 						ntype1=vectorTy(vt.next,sub.eval());
 					}
@@ -7908,6 +7908,12 @@ Expression iDivType(Expression t1, Expression t2){
 	if(num1 == NumericType.ℂ || num2 == NumericType.ℂ) return null;
 	bool classical = t1.isClassical() && t2.isClassical();
 	return numericTy(min(max(num1, num2), NumericType.ℤt), classical);
+}
+// The type of a length num sub l built for a split, as analysing it would give
+// (!𝔹 when num is the literal 0, which the checker compares with its lowering).
+private Expression splitLengthType(Expression num,Expression l){
+	if(auto t=nSubType(num.type,l.type)) return t;
+	return ℕt(true);
 }
 Expression nSubType(Expression t1, Expression t2){
 	if(!isEmpty(t1)&&!isEmpty(t2)){
