@@ -3333,21 +3333,33 @@ Expression defineLhsSemanticImpl(CatExp ce,DefineLhsContext context){
 			isVectorExp=true;
 		}
 		if(isTupleExp||isVectorExp){
-			bool ok=false;
+			// A split that does not fit the initializer always aborts, so the
+			// parts get no initializer (clamping gave them ones of the wrong
+			// length, which compiling a global then used).
+			bool ok=false,known=false;
 			size_t mid;
-			if(!ok&&l1){
+			if(!known&&l1){
 				if(auto x=l1.asIntegerConstant(true)){
-					ok=true;
-					try mid=min(x.get.to!size_t,es.length);
-					catch(Exception) ok=false;
+					known=true;
+					if(0<=x.get&&x.get<=es.length){
+						ok=true;
+						mid=x.get.to!size_t;
+					}
 				}
 			}
-			if(!ok&&l2){
+			if(!known&&l2){
 				if(auto x=l2.asIntegerConstant(true)){
-					ok=true;
-					try mid=es.length-min(x.get.to!size_t,es.length);
-					catch(Exception) ok=false;
+					known=true;
+					if(0<=x.get&&x.get<=es.length){
+						ok=true;
+						mid=es.length-x.get.to!size_t;
+					}
 				}
+			}
+			static if(!isPresemantic) if(known&&!ok&&cast(TopScope)context.sc){
+				// a global needs a value
+				context.sc.error(format("split does not fit global constant initializer of length %s",es.length),ce.loc);
+				ce.setSemError();
 			}
 			if(ok){
 				ninit1=expressionSemantic(isTupleExp?new TupleExp(es[0..mid]):new VectorExp(es[0..mid]),context.expSem);
